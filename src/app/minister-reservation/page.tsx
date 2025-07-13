@@ -7,6 +7,12 @@ import { Input } from '@/components/ui/input';
 import { format, addMinutes, startOfDay, addDays } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 
+interface Reservation {
+  name: string;
+  minister: string;
+  time: string;
+}
+
 const ministers = [
   { name: '부집행관 (Deputy Executor)', color: 'text-red-600', emoji: '🛡️' },
   { name: '보건부장관 (Minister of Health)', color: 'text-green-600', emoji: '⚕️' },
@@ -16,8 +22,8 @@ const ministers = [
 ];
 
 export default function MinisterReservation() {
-  const [reservations, setReservations] = useState([]);
-  const [pending, setPending] = useState([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [pending, setPending] = useState<Reservation[]>([]);
   const [name, setName] = useState('');
   const [minister, setMinister] = useState(ministers[0].name);
   const [time, setTime] = useState('');
@@ -27,7 +33,7 @@ export default function MinisterReservation() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setReservations((prev) => prev.filter(r => new Date(r.time) > new Date()));
+      setReservations((prev) => prev.filter((r: Reservation) => new Date(r.time) > new Date()));
     }, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -35,7 +41,7 @@ export default function MinisterReservation() {
   const addReservation = () => {
     if (!name || !time || !minister) return;
     if (reservations.find(r => r.time === time) || pending.find(r => r.time === time)) {
-      alert('이미 예약된 시간입니다. 다른 시간을 선택하세요.');
+      alert('이미 예약된 시간입니다. 다른 시간을 선택하세요. / Time already reserved. Please choose another.');
       return;
     }
 
@@ -44,7 +50,7 @@ export default function MinisterReservation() {
     setTime('');
   };
 
-  const approveReservation = (index) => {
+  const approveReservation = (index: number) => {
     const approved = pending[index];
     setReservations([...reservations, approved]);
     setPending(pending.filter((_, i) => i !== index));
@@ -54,7 +60,7 @@ export default function MinisterReservation() {
     if (adminPassword === 'Hat2378') {
       setAdminMode(true);
     } else {
-      alert('비밀번호가 틀렸습니다.');
+      alert('비밀번호가 틀렸습니다. / Incorrect password.');
     }
     setAdminPassword('');
   };
@@ -78,11 +84,11 @@ export default function MinisterReservation() {
 
   return (
     <div className="p-4 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">장관 신청 예약 시스템 (영국시간 기준)</h1>
+      <h1 className="text-2xl font-bold mb-4">장관 신청 예약 시스템 / Minister Reservation System (UK Time)</h1>
 
       <Card className="mb-4">
         <CardContent className="space-y-2">
-          <Input placeholder="이름 입력" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input placeholder="이름 입력 / Enter Name" value={name} onChange={(e) => setName(e.target.value)} />
           <select className="w-full p-2 border rounded" value={minister} onChange={(e) => setMinister(e.target.value)}>
             {ministers.map((m, idx) => (
               <option key={idx} value={m.name}>{m.name}</option>
@@ -96,29 +102,29 @@ export default function MinisterReservation() {
             step="1800"
             onChange={(e) => setTime(e.target.value)}
           />
-          {localTime && <p>현지 시간: {localTime}</p>}
-          <Button onClick={addReservation}>예약 신청</Button>
+          {localTime && <p>현지 시간 / Local Time: {localTime}</p>}
+          <Button onClick={addReservation}>예약 신청 / Submit Reservation</Button>
         </CardContent>
       </Card>
 
       {!adminMode && (
         <Card className="mb-4">
           <CardContent className="space-y-2">
-            <h2 className="text-lg font-semibold">관리자 로그인</h2>
+            <h2 className="text-lg font-semibold">관리자 로그인 / Admin Login</h2>
             <Input
               type="password"
-              placeholder="관리자 비밀번호 입력"
+              placeholder="관리자 비밀번호 입력 / Enter Admin Password"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
             />
-            <Button onClick={handleAdminLogin}>로그인</Button>
+            <Button onClick={handleAdminLogin}>로그인 / Login</Button>
           </CardContent>
         </Card>
       )}
 
       {adminMode && (
         <div>
-          <h2 className="text-xl font-semibold my-4">예약 신청 대기 (관리자 승인 필요)</h2>
+          <h2 className="text-xl font-semibold my-4">예약 신청 대기 (관리자 승인 필요) / Pending Reservations (Admin Approval Required)</h2>
           <div className="space-y-2">
             {pending.map((res, index) => (
               <Card key={index}>
@@ -126,7 +132,7 @@ export default function MinisterReservation() {
                   <p><strong>이름(Name):</strong> {res.name}</p>
                   <p><strong>장관(Minister):</strong> {res.minister}</p>
                   <p><strong>시간(Time):</strong> {format(new Date(res.time), 'yyyy-MM-dd HH:mm')}</p>
-                  <Button onClick={() => approveReservation(index)}>수락(Approve)</Button>
+                  <Button onClick={() => approveReservation(index)}>수락 / Approve</Button>
                 </CardContent>
               </Card>
             ))}
