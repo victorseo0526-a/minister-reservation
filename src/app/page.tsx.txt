@@ -1,0 +1,142 @@
+"use client";
+
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { format, addMinutes, startOfDay, addDays, isBefore } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
+
+const ministers = [
+  '부집행관',
+  '보건부장관',
+  '국방부장관',
+  '전략부장관',
+  '교육부장관'
+];
+
+export default function MinisterReservation() {
+  const [reservations, setReservations] = useState([]);
+  const [name, setName] = useState('');
+  const [minister, setMinister] = useState('부집행관');
+  const [time, setTime] = useState('');
+  const [localTime, setLocalTime] = useState('');
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setReservations((prev) => prev.filter(r => new Date(r.time) > new Date()));
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (time) {
+      const selectedTime = new Date(time);
+      const minutes = selectedTime.getMinutes();
+      if (minutes !== 0 && minutes !== 30) {
+        selectedTime.setMinutes(minutes < 30 ? 0 : 30);
+        selectedTime.setSeconds(0);
+        setTime(format(selectedTime, "yyyy-MM-dd'T'HH:mm"));
+      }
+
+      const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const local = toZonedTime(selectedTime, userTimeZone);
+      setLocalTime(format(local, 'yyyy-MM-dd HH:mm'));
+    }
+  }, [time]);
+
+  const addReservation = () => {
+    if (!name || !time || !minister) return;
+    if (reservations.find(r => r.time === time)) {
+      alert('이미 예약된 시간입니다. 다른 시간을 선택하세요.');
+      return;
+    }
+
+    setReservations([...reservations, { name, minister, time }]);
+    setName('');
+    setTime('');
+  };
+
+  const generateTimeSlots = () => {
+    const slots = [];
+    const start = new Date();
+    start.setUTCHours(0, 0, 0, 0);
+    for (let i = 0; i < 48; i++) {
+      slots.push(format(addMinutes(start, i * 30), 'HH:mm'));
+    }
+    return slots;
+  };
+
+  const minDate = format(new Date(), "yyyy-MM-dd'T'HH:mm");
+  const maxDate = format(addDays(startOfDay(new Date()), 2), "yyyy-MM-dd'T'00:00");
+
+  return (
+    <div className="p-4 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">장관 신청 예약 시스템 (영국시간 기준)</h1>
+
+      <Card className="mb-4">
+        <CardContent className="space-y-2">
+          <Input
+            placeholder="이름 입력"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <select
+            className="w-full p-2 border rounded"
+            value={minister}
+            onChange={(e) => setMinister(e.target.value)}
+          >
+            {ministers.map((m, idx) => (
+              <option key={idx} value={m}>{m}</option>
+            ))}
+          </select>
+          <Input
+            type="datetime-local"
+            value={time}
+            min={minDate}
+            max={maxDate}
+            step="1800"
+            onChange={(e) => setTime(e.target.value)}
+          />
+          {localTime && <p>현지 시간: {localTime}</p>}
+          <Button onClick={addReservation}>예약 확정</Button>
+        </CardContent>
+      </Card>
+
+      <h2 className="text-xl font-semibold my-4">예약 현황 (장관별)</h2>
+      <div className="space-y-4">
+        {ministers.map((ministerName, idx) => (
+          <div key={idx}>
+            <h3 className="text-lg font-bold">{ministerName}</h3>
+            {reservations
+              .filter(res => res.minister === ministerName)
+              .map((res, index) => (
+                <Card key={index} className="mb-2">
+                  <CardContent>
+                    <p><strong>이름:</strong> {res.name}</p>
+                    <p><strong>예약 시간 (영국 기준):</strong> {format(new Date(res.time), 'yyyy-MM-dd HH:mm')}</p>
+                  </CardContent>
+                </Card>
+              ))}
+          </div>
+        ))}
+      </div>
+
+      <h2 className="text-xl font-semibold my-4">30분 단위 시간표 (24시간)</h2>
+      <div className="grid grid-cols-3 gap-2">
+        {generateTimeSlots().map((slot, idx) => (
+          <Card key={idx}>
+            <CardContent>
+              <p><strong>{slot}</strong></p>
+              {reservations
+                .filter(r => format(new Date(r.time), 'HH:mm') === slot)
+                .map((r, i) => (
+                  <p key={i}>{r.minister} - {r.name}</p>
+                ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
